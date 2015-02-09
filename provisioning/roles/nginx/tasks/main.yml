@@ -1,0 +1,57 @@
+---
+- name: Add Nginx Repository
+  apt_repository: repo='ppa:nginx/stable' state=present
+  register: ppastable
+  
+- name: Install Nginx
+  apt: pkg=nginx state=installed update_cache=true
+  when: ppastable|success
+  register: nginxinstalled
+  notify:
+  - start nginx
+  
+- name: Add H5BP Config
+  when: nginxinstalled|success
+  copy: src=h5bp dest=/etc/nginx owner=root group=root
+  
+- name: Add ssl folder
+  command: mkdir /etc/nginx/ssl
+  args:
+    chdir: /etc/nginx
+    creates: /etc/nginx/ssl
+    
+- name: Add /usr/share/nginx/logs folder
+  command: mkdir /usr/share/nginx/logs
+  args:
+    chdir: /usr/share/nginx
+    creates: /usr/share/nginx/logs
+    
+- name: Add SSL key
+  when: nginxinstalled|success
+  copy: src={{ ssl_name }}.key dest=/etc/nginx/ssl owner=root group=root
+
+- name: Add SSL certificate
+  when: nginxinstalled|success
+  copy: src={{ ssl_name }}.crt dest=/etc/nginx/ssl owner=root group=root
+  
+- name: Disable Default Site (enabled)
+  when: nginxinstalled|success
+  file: dest=/etc/nginx/sites-enabled/default state=absent
+
+- name: Disable Default Site (available)
+  when: nginxinstalled|success
+  file: dest=/etc/nginx/sites-available/default state=absent
+  
+- name: Add Site Config
+  when: nginxinstalled|success
+  register: site_config
+  template: src=site.com.j2 dest=/etc/nginx/sites-available/{{ domain }}.conf owner=root group=root
+
+- name: Enable Site Config
+  when: site_config|success
+  file: src=/etc/nginx/sites-available/{{ domain }}.conf dest=/etc/nginx/sites-enabled/{{ domain }}.conf state=link
+
+
+- name: reload nginx
+  shell: nginx -s reload
+  

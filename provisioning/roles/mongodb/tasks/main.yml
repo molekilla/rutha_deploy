@@ -1,0 +1,11 @@
+---
+
+- name: Install ppa key
+  apt_key: id=7F0CEB10 url=http://keyserver.ubuntu.com:11371/pks/lookup?op=get&search=0x9ECBEC467F0CEB10 state=present
+
+- name: Install ppa
+  apt_repository: repo='deb http://downloads-distro.mongodb.org/repo/ubuntu-upstart dist 10gen' state=present
+
+- name: Install package
+  apt: name=mongodb-org state=latest force=yes
+  notify: restart mongod

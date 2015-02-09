@@ -1,0 +1,10 @@
+---
+# This playbook deploys a rutha server.
+
+- hosts: "{{ target_host }}"
+  roles:
+    - nodejs
+    - nodejs_modules
+    - mongodb
+    - rutha    
+    - nginx

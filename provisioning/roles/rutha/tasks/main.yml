@@ -1,0 +1,116 @@
+---
+- name: SSH Deployment Key
+  authorized_key: user={{ ansible_ssh_user }}
+  args:
+    key: "{{ lookup('file', '~/.ssh/id_rsa.pub') }}"
+
+- name: Install Unzip
+  apt: name=unzip state=present
+  
+- name: Create apps dir
+  sudo_user: "{{ ansible_ssh_user }}"
+  file: state=directory path=/home/{{ ansible_ssh_user }}/apps
+
+- name: Create app dir
+  sudo_user: "{{ ansible_ssh_user }}"
+  file: state=directory path=/home/{{ ansible_ssh_user }}/apps/{{ app_name }}
+
+- name: Create repos dir
+  sudo_user: "{{ ansible_ssh_user }}"
+  file: state=directory path=/home/{{ ansible_ssh_user }}/repos
+
+- name: Create repo dir
+  sudo_user: "{{ ansible_ssh_user }}"
+  file: state=directory path=/home/{{ ansible_ssh_user }}/repos/{{ app_name }}
+     
+- name: Clone repository
+  git: repo={{ app_repo }}
+  sudo: no
+  sudo_user: "{{ ansible_ssh_user }}"
+  args:
+    accept_hostkey: yes
+    dest: "/home/{{ ansible_ssh_user }}/repos/{{ app_name }}"
+    version: "{{ app_branch }}"
+ 
+- name: Get UI Folder Stats
+  stat: path=/home/{{ ansible_ssh_user }}/apps/{{ app_name }}/ui
+  register: app_ui_folder
+  
+- name: stop rutha frontend server
+  environment: app_env
+  sudo_user: "{{ ansible_ssh_user }}"
+  command: forever stop ui/lib/hapi/index.js
+  ignore_errors: true
+  when: app_ui_folder.stat.isdir is defined and app_ui_folder.stat.isdir
+  args:
+    chdir: /home/{{ ansible_ssh_user }}/apps/{{ app_name }}
+
+- name: stop rutha api server
+  environment: app_env
+  sudo_user: "{{ ansible_ssh_user }}"
+  command: forever stop service/lib/hapi/index.js
+  ignore_errors: true
+  when: app_ui_folder.stat.isdir is defined and app_ui_folder.stat.isdir
+  args:
+    chdir: /home/{{ ansible_ssh_user }}/apps/{{ app_name }}
+    
+- name: Backup existing app folder  
+  sudo_user: "{{ ansible_ssh_user }}"
+  command: cp -R {{ app_name }} {{ app_name }}_{{ timestamp }}
+  when: app_ui_folder.stat.isdir is defined and app_ui_folder.stat.isdir
+  args:
+    chdir: /home/{{ ansible_ssh_user }}/apps
+    creates: /home/{{ ansible_ssh_user }}/apps/{{ app_name }}_{{ timestamp }}
+
+- name: Clean existing UI folder
+#  sudo_user: "{{ ansible_ssh_user }}"  
+  file: state=absent path=/home/{{ ansible_ssh_user }}/apps/{{ app_name }}/ui
+  when: app_ui_folder.stat.isdir is defined and app_ui_folder.stat.isdir   
+  #notify: stop rutha frontend server
+  
+- name: Clean existing Service folder
+#  sudo_user: "{{ ansible_ssh_user }}"  
+  file: state=absent path=/home/{{ ansible_ssh_user }}/apps/{{ app_name }}/service
+  when: app_ui_folder.stat.isdir is defined and app_ui_folder.stat.isdir
+  #notify: stop rutha api server
+    
+- name: Copy service to apps/{{ app_name }}
+  sudo_user: "{{ ansible_ssh_user }}"
+  command: cp -R /home/{{ ansible_ssh_user }}/repos/{{ app_name }}/service service
+  args:
+    chdir: /home/{{ ansible_ssh_user }}/apps/{{ app_name }}
+    creates: /home/{{ ansible_ssh_user }}/apps/{{ app_name }}/service
+# TODO 
+- name: Copy shared dir
+  sudo_user: "{{ ansible_ssh_user }}"
+  command: cp -R /home/{{ ansible_ssh_user }}/repos/{{ app_name }}/shared shared
+  args:
+    chdir: /home/{{ ansible_ssh_user }}/apps/{{ app_name }}
+    creates: /home/{{ ansible_ssh_user }}/apps/{{ app_name }}/shared
+
+- name: Extract website zip
+  sudo_user: "{{ ansible_ssh_user }}"
+  command: unzip /home/{{ ansible_ssh_user }}/repos/{{ app_name }}/ui/releases/{{ app_version }}.zip
+  args:
+    chdir: /home/{{ ansible_ssh_user }}/apps/{{ app_name }}
+    creates: /home/{{ ansible_ssh_user }}/apps/{{ app_name }}/ui
+
+- name: Install UI node_modules  for production
+  environment: app_env
+  npm: path={{ item }} state=present production=yes
+  with_items:
+    - /home/{{ ansible_ssh_user }}/apps/{{ app_name }}/ui
+  notify: start rutha frontend server
+  
+- name: Install Service node_modules  for production
+  environment: app_env
+  npm: path={{ item }} state=present production=yes
+  with_items:
+    - /home/{{ ansible_ssh_user }}/apps/{{ app_name }}/service
+  notify: start rutha api server
+
+- name: Clean Repos
+  command: rm -rf {{ app_name }}
+  args:
+    chdir: /home/{{ ansible_ssh_user }}/repos
+    removes: /home/{{ ansible_ssh_user }}/repos/{{ app_name }}

@@ -1,0 +1,25 @@
+---
+- name: Update apt cache if needed
+  apt: update_cache=yes cache_valid_time=3600
+
+- name: "Install curl, git and libessential"
+  apt: pkg={{ item }} state=installed
+  with_items:
+    - git
+    - build-essential
+    - curl
+
+- name: Test Nodesource PPA
+  sudo_user: root
+  shell: curl -sL https://deb.nodesource.com/test | bash -
+  register: nodesource_test
+  changed_when: false
+  ignore_errors: true
+
+- name: Install Nodesource sPPA
+  sudo_user: root
+  shell: curl -sL https://deb.nodesource.com/setup | sudo bash -
+  when: nodesource_test.stdout.find('SUCCESS') == -1
+
+- name: Install NodeJS
+  apt: pkg=nodejs state=installed

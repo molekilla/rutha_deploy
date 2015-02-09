@@ -1,0 +1,42 @@
+---
+- name: start rutha frontend server
+  environment: app_env
+  sudo_user: "{{ ansible_ssh_user }}"
+  command: forever start ui/lib/hapi/index.js
+  args:
+    chdir: /home/{{ ansible_ssh_user }}/apps/{{ app_name }}
+    
+- name: restart rutha frontend server
+  environment: app_env
+  sudo_user: "{{ ansible_ssh_user }}" 
+  command: forever restart ui/lib/hapi/index.js
+  args:
+    chdir: /home/{{ ansible_ssh_user }}/apps/{{ app_name }}
+    
+- name: stop rutha frontend server
+  environment: app_env
+  sudo_user: "{{ ansible_ssh_user }}"
+  command: forever stop ui/lib/hapi/index.js
+  args:
+    chdir: /home/{{ ansible_ssh_user }}/apps/{{ app_name }}
+    
+- name: start rutha api server
+  environment: app_env
+  sudo_user: "{{ ansible_ssh_user }}"
+  command: forever start service/lib/hapi/index.js
+  args:
+    chdir: /home/{{ ansible_ssh_user }}/apps/{{ app_name }}
+    
+- name: restart rutha api server
+  environment: app_env
+  sudo_user: "{{ ansible_ssh_user }}" 
+  command: forever restart service/lib/hapi/index.js
+  args:
+    chdir: /home/{{ ansible_ssh_user }}/apps/{{ app_name }}
+    
+- name: stop rutha api server
+  environment: app_env
+  sudo_user: "{{ ansible_ssh_user }}"
+  command: forever stop service/lib/hapi/index.js
+  args:
+    chdir: /home/{{ ansible_ssh_user }}/apps/{{ app_name }}

@@ -1,0 +1,20 @@
+# Ports
+http_port: 80
+https_port: 443
+
+# nginx
+domain: disrupting.com
+ssl_name: disrupting.com
+
+local_api_port: 3002
+local_fe_port: 3005
+
+timestamp: "{{ ansible_date_time.epoch }}"
+
+# rutha
+app_name: disrupting_app
+app_repo: git@github.com:molekilla/rutha.git
+app_branch: release0.1.0
+app_version: v0.1.0
+app_env: 
+  NODE_ENV: production
