@@ -3,6 +3,10 @@ rutha staging and deployment vagrant environment
 
 ### How to
 
+#### Security
+
+NEVER push keys to a public repo. We dearly recommend to clone to a private repo.
+
 #### Playbook settings
 
 Configure app settings
